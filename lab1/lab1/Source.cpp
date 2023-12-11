@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void OutMatrixInConsole(vector<vector<double>> A, vector<double> b);
+void OutMatrixInConsole(const vector<vector<double>>& A, const vector<double>& b);
 
 enum UserChoiceAboutSolMethod
 {
@@ -18,7 +18,7 @@ enum UserChoiceAboutInputMethod
 	defaultMatrix = 2,
 };
 
-bool CheckRowProportionality(vector<double> firstRows, vector<double> secondRows) // checking rows for proportionality
+bool CheckRowProportionality(const vector<double>& firstRows, const vector<double>& secondRows) // checking rows for proportionality
 {
 	int rowSize = firstRows.size();
 	double proportionalityFactor = firstRows[0] / secondRows[0];
@@ -35,16 +35,17 @@ bool CheckRowProportionality(vector<double> firstRows, vector<double> secondRows
 vector<double> MultiplyMatrixVector(vector<vector<double>> matrixOfElements, vector<double> vectorOfElements)
 {
 	vector<double> resultVector(matrixOfElements.size());
-	for (int i = 0; i < resultVector.size(); i++)
+	int vectorSize = resultVector.size();
+	for (int i = 0; i < vectorSize; i++)
 	{
 		resultVector[i] = 0;
-		for (int j = 0; j < resultVector.size(); j++)
+		for (int j = 0; j < vectorSize; j++)
 			resultVector[i] += matrixOfElements[i][j] * vectorOfElements[j];
 	}
 	return resultVector;
 }
 
-bool CheckProportionality(vector<vector<double>> A, vector<double> b) // checking a matrix for row proportionality
+bool CheckProportionality(const vector<vector<double>>& A, const vector<double>& b) // checking a matrix for row proportionality
 {
 	bool isProportional = false;
 	int vectorSize = A.size();
@@ -106,18 +107,19 @@ vector<double> SolveGaussMethod(vector<vector<double>> A, vector<double> b)
 	return vectorOfRoots;
 }
 
-double FindMaxInRV(vector<vector<double>> A, vector<double> b, vector<double> firstRoots) // finding the residual vector and its norm
+double FindMaxInRV(const vector<vector<double>>& A, const vector<double>& b, const vector<double>& firstRoots) // finding the residual vector and its norm
 {
 	vector<double> vectorCalculationDiff(firstRoots.size());
 	double maxInVCD = 0;
-	for (int i = 0; i < firstRoots.size(); i++)
+	int vectorSize = firstRoots.size();
+	for (int i = 0; i < vectorSize; i++)
 	{
-		for (int j = 0; j < firstRoots.size(); j++)
+		for (int j = 0; j < vectorSize; j++)
 			vectorCalculationDiff[i] += A[i][j] * firstRoots[j];
 		vectorCalculationDiff[i] -= b[i];
 	}
 	maxInVCD = abs(vectorCalculationDiff[0]);
-	for (int i = 1; i < vectorCalculationDiff.size(); i++)
+	for (int i = 1; i < vectorSize; i++)
 	{
 		if (maxInVCD < abs(vectorCalculationDiff[i]))
 			maxInVCD = abs(vectorCalculationDiff[i]);
@@ -125,32 +127,33 @@ double FindMaxInRV(vector<vector<double>> A, vector<double> b, vector<double> fi
 	return  maxInVCD;
 }
 
-double CalculateError(vector<double> firstRoots, vector<double> secondRoots) // calculation of relative error
+double CalculateError(const vector<double>& firstRoots, const vector<double>& secondRoots) // calculation of relative error
 {
 	int vectorSize = firstRoots.size();
 	double calcError = 0, maxDiff = 0, maxRoots = 0;
 	for (int i = 0; i < vectorSize; i++)
 	{
-		if (secondRoots[i] - firstRoots[i] > maxDiff)
-			maxDiff = secondRoots[i] - firstRoots[i];
+		if (abs(secondRoots[i]) - abs(firstRoots[i]) > maxDiff)
+			maxDiff = abs(secondRoots[i]) - abs(firstRoots[i]);
 		if (firstRoots[i] > maxRoots)
 			maxRoots = firstRoots[i];
 	}
-	calcError = maxDiff / maxRoots;
+	calcError = abs(maxDiff) / abs(maxRoots);
 	return calcError;
 }
 
-void OutMatrixInConsole(vector<vector<double>> A, vector<double> b) // output matrix to console
+void OutMatrixInConsole(const vector<vector<double>>& A, const vector<double>& b) // output matrix to console
 {
-	for (int i = 0; i < A.size(); i++)
+	int vectorSize = A.size();
+	for (int i = 0; i < vectorSize; i++)
 	{
-		for (int j = 0; j < A.size(); j++)
+		for (int j = 0; j < vectorSize; j++)
 			cout << A[i][j] << setw(11);
 		cout << setw(3) << "| " << b[i] << endl;
 	}
 }
 
-vector<double> SolveSystemWithLDLFactorization(vector<vector<double>> A, vector<double> b)
+vector<double> SolveSystemWithLDLFactorization(vector<vector<double>>& A, vector<double>& b)
 {
 	int sizeOfMatrix = A.size();
 	vector<double> diagonalMatrix(sizeOfMatrix), vectorOfRoots(sizeOfMatrix), y(sizeOfMatrix), z(sizeOfMatrix);
@@ -222,13 +225,13 @@ int main()
 			{
 				for (int j = 0; j < matrixSize; j++)
 				{
-					printf("enter element with index A[%d][%d]: ", i + 1, j + 1);
+					cout << "enter element with index A[" << i + 1 << "][" << j + 1 << "]:\n";
 					cin >> A[i][j];
 				}
 			}
 			for (int i = 0; i < matrixSize; i++)
 			{
-				printf("enter element b[%d]: ", i + 1);
+				cout << "enter element b[" << i + 1 << "]:\n";
 				cin >> b[i];
 			}
 			break;
@@ -258,13 +261,13 @@ int main()
 		cout << "\nanswer: \n";
 		vector<double> firstRoots = SolveGaussMethod(A, b);
 		for (int i = 0; i < firstRoots.size(); i++)
-			printf("x%d= %f  ", i + 1, firstRoots[i]);
+			cout << " x" << i + 1 << " = " << firstRoots[i];
 		double maxNormaOfRV = FindMaxInRV(A, b, firstRoots);
 		cout << "\n\nnorma of residual vector: \n" << maxNormaOfRV << endl;
 		vector<double> secondRoots = SolveGaussMethod(A, MultiplyMatrixVector(A, firstRoots));
 		cout << "\nsecond solution: \n";
 		for (int i = 0; i < secondRoots.size(); i++)
-			printf("x%d= %f ", i + 1, secondRoots[i]);
+			cout << " x" << i + 1 << " = " << secondRoots[i];
 		cout << "\n\ncalculation error: \n";
 		double calculationError = CalculateError(firstRoots, secondRoots);
 		cout << calculationError << endl;
@@ -308,8 +311,9 @@ int main()
 		OutMatrixInConsole(A, b);
 		vector<double> vectorOfRoots = SolveSystemWithLDLFactorization(A, b);
 		cout << "roots found using LDL factorization: " << endl;
-		for (int i = 0; i < vectorOfRoots.size(); i++)
-			printf("x%d = %.*f; ", i + 1, 2, vectorOfRoots[i]);
+		int vectorSize = vectorOfRoots.size();
+		for (int i = 0; i < vectorSize; i++)
+			cout << " x" << i + 1 << " = " << vectorOfRoots[i];
 	}
 	}
 	return 0;
