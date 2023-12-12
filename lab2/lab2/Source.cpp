@@ -1,166 +1,253 @@
 #include <iostream>
-#include <vector>
+#include <math.h>
+#include <stdlib.h>
+#include <iomanip>
 
 using namespace std;
 
-bool CheckProportionality(vector<vector<double>> A, vector<double> b);
-bool CheckRowProportionality(vector<double> firstRows, vector<double> secondRows);
-vector<double> SolveGaussMethod(vector<vector<double>> A, vector<double> b);
-vector<vector<double>> AnalyticalMethodForJacobiMatrix(double x1, double x2);
-vector<vector<double>> CourseDifferenceMethodForJacobiMatrix(double x1, double x2, double relIncrement);
-void SolveNewtonMethod(double x1, double x2, const double firstSolutionError, const double secondSolutionError,
-	const int maxNumberIterations, double relativeIncrement);
-double f1(double x1, double x2) { return sin(x1 + 1) - x2 - 1; }
-double f1dx1(double x1, double x2) { return cos(x1 + 1); }
-double f1dx2(double x1, double x2) { return -1.0; }
-double f2(double x1, double x2) { return 2 * x1 + cos(x2) - 2; }
-double f2dx1(double x1, double x2) { return 2; }
-double f2dx2(double x1, double x2) { return -sin(x2); }
-
-
-bool CheckProportionality(vector<vector<double>> A, vector<double> b)
+double func1(double x1, double x2)
 {
-	bool isProportional = false;
-	int vectorSize = A.size();
-	vector<vector<double>> A_b(vectorSize, vector<double>(vectorSize + 1, 0));
-	for (int i = 0; i < vectorSize; i++)
-	{
-		for (int j = 0; j < vectorSize + 1; j++)
-		{
-			if (j == vectorSize)
-				A_b[i][j] = b[i];
-			else
-				A_b[i][j] = A[i][j];
-		}
-	}
-	for (int i = 0; i < vectorSize - 1; i++)
-	{
-		for (int j = i + 1; j < vectorSize; j++)
-		{
-			isProportional = CheckRowProportionality(A_b[i], A_b[j]);
-			if (isProportional)
-				return true;
-		}
-	}
-	return false;
+	return log(1 + (x1 + x2) / 5.0) - sin(x2 / 3.0) + 1.1;
 }
 
-bool CheckRowProportionality(vector<double> firstRows, vector<double> secondRows)
+double func2(double x1, double x2)
 {
-	int rowSize = firstRows.size();
-	double proportionalityFactor = firstRows[0] / secondRows[0];
-	for (int i = 1; i < rowSize; i++)
-	{
-		if (proportionalityFactor == firstRows[i] / secondRows[i])
-			continue;
-		else
-			return false;
-	}
-	return true;
+	return cos(x1 * x2 / 6.0) - x2 + 0.5;
 }
 
-vector<double> SolveGaussMethod(vector<vector<double>> A, vector<double> b)
+double der00(double x1, double x2)
 {
-	if (CheckProportionality(A, b))
+	return (1 / (x1 + x2 + 5.0));
+}
+
+double der01(double x1, double x2)
+{
+	return (1.0 / (x1 + x2 + 5.0) - (1.0 / 3.0) * cos(x2 / 3.0));
+}
+
+double der10(double x1, double x2)
+{
+	return (-1 * (1.0 / 6.0) * x2 * sin(x1 * x2 / 6.0));
+}
+
+double der11(double x1, double x2)
+{
+	return (-1 * (1.0 / 6.0) * x1 * sin(x1 * x2 / 6.0) - 1);
+}
+
+double* methodG(double** full, int n, int m)
+{
+	//деление построчно
+	double elem, max;
+	int coordStr;
+
+	for (int i = 0; i < n; i++)
 	{
-		cout << "The rows in the matrix are proportional!";
-		exit(1);
-	}
-	int vectorSize = A.size();
-	for (int i = 0; i < vectorSize; i++)
-	{
-		int k = i;
-		for (int j = i + 1; j < vectorSize; j++)
+		max = 0;
+		coordStr = 0;
+
+		for (int j = i; j < n; j++) //нахождение максимума
 		{
-			if (abs(A[j][i]) > abs(A[k][i]))
-				k = j;
+			if (abs(full[j][i]) > max)
+			{
+				max = abs(full[j][i]);
+				coordStr = j;
+			}
 		}
-		swap(A[i], A[k]);
-		swap(b[i], b[k]);
-		double div = A[i][i];
-		for (int j = i; j < vectorSize; j++)
-			A[i][j] /= div;
-		b[i] /= div;
-		for (int j = i + 1; j < vectorSize; j++)
+
+		if (max == 0)
 		{
-			double mult = A[j][i];
-			for (int k = i; k < vectorSize; k++)
-				A[j][k] -= mult * A[i][k];
-			b[j] -= mult * b[i];
+			cout << "Max in Gauss method == 0";
+			exit;
 		}
-	}
-	vector<double> vectorOfRoots(vectorSize);
-	for (int i = vectorSize - 1; i >= 0; i--)
-	{
-		vectorOfRoots[i] = b[i];
-		for (int j = i + 1; j < vectorSize; j++)
-			vectorOfRoots[i] -= A[i][j] * vectorOfRoots[j];
-	}
-	return vectorOfRoots;
-}
 
-vector<vector<double>> AnalyticalMethodForJacobiMatrix(double x1, double x2)
-{
-	return { {f1dx1(x1, x2), f1dx2(x1, x2)}, { f2dx1(x1, x2), f2dx2(x1, x2) } };
-}
-
-vector<vector<double>> CourseDifferenceMethodForJacobiMatrix(double x1, double x2, double relIncrement)
-{
-	return vector<vector<double>> { {(f1(x1 + x1 * relIncrement, x2) - f1(x1, x2)) / relIncrement / x1, (f1(x1, x2 + x2 * relIncrement) - f1(x1, x2)) / relIncrement / x2},
-		{ (f2(x1 + x1 * relIncrement, x2) - f2(x1, x2)) / relIncrement / x1, (f2(x1, x2 + x2 * relIncrement) - f2(x1, x2)) / relIncrement / x2 } };
-}
-
-void SolveNewtonMethod(double x1, double x2, const double firstSolutionError, const double secondSolutionError,
-	const int maxNumberIterations, double relativeIncrement)
-{
-	double firstDelta = max(abs(f1(x1, x2)), abs(f2(x1, x2)));
-	double secondDelta = 1;
-	if (relativeIncrement != NULL)
-		cout << "Relative increment: " << relativeIncrement << ";\n\n";
-	int iteration = 0;
-	while ((firstDelta > firstSolutionError || secondDelta > secondSolutionError) && iteration < maxNumberIterations)
-	{
-		iteration++;
-		printf("%d: delta of x1: %.*f; delta of x2: %.*f;\n", iteration, 10, firstDelta, 10, secondDelta);
-		vector<double> residualVector{ -f1(x1, x2), -f2(x1, x2) };
-		vector<vector<double>> JacobiMatrix;
-		if (relativeIncrement == NULL)
-			JacobiMatrix = AnalyticalMethodForJacobiMatrix(x1, x2);
-		else
-			JacobiMatrix = CourseDifferenceMethodForJacobiMatrix(x1, x2, relativeIncrement);
-		vector<double> vectorOfSolution = SolveGaussMethod(JacobiMatrix, residualVector);
-		x1 += vectorOfSolution[0];
-		x2 += vectorOfSolution[1];
-		firstDelta = abs(residualVector[0]);
-		for (int i = 1; i < residualVector.size(); i++)
+		if (max > abs(full[i][i])) //меняем местами 1 строку и строку с наибольшим 1 элементом
 		{
-			if (firstDelta < abs(residualVector[i]))
-				firstDelta = abs(residualVector[i]);
+			double* ptr = full[i];
+			full[i] = full[coordStr];
+			full[coordStr] = ptr;
 		}
-		double firstMax = abs(x1) < 1 ? abs(vectorOfSolution[0]) : abs(vectorOfSolution[0] / x1);
-		double secondMax = abs(x2) < 1 ? abs(vectorOfSolution[1]) : abs(vectorOfSolution[1] / x2);
-		secondDelta = max(firstMax, secondMax);
+
+		elem = full[i][i];
+
+		for (int j = i; j < m; j++)
+		{
+			full[i][j] /= elem;   //делим строку на элемент
+		}
+
+		for (int j = i + 1; j < n; j++) //делим следующие строки
+		{
+			elem = full[j][i];
+
+			for (int k = i; k < m; k++)
+			{
+				full[j][k] -= elem * full[i][k];
+			}
+		}
 	}
-	printf("\nnumber of iteration: %d. \nfirst x on this iteration: %.*f; \nsecond x on this iteration: %.*f.\n",
-		iteration, 15, x1, 15, x2);
-	cout << "\n=====================================================\n\n";
+
+	//поиск решения
+
+	double* ans = new double[n];
+	ans[n - 1] = full[n - 1][m - 1]; //
+
+	for (int i = n - 2; i >= 0; i--)
+	{
+		ans[i] = full[i][n];
+
+		for (int j = i + 1; j < m - 1; j++)
+		{
+			ans[i] -= full[i][j] * ans[j];
+		}
+	}
+
+	return ans;
+}
+
+// double** jacobFunc(double x1, double x2)
+// {
+// 	double Jacob_func1[2][2]{ {der00(x1 ,x2), der01(x1 ,x2)}, {der10(x1 ,x2), der11(x1 ,x2)} };
+// 	double** Jacob_func = new double* [2];
+
+// 	for (int i = 0; i < 2; i++)
+// 	{
+// 		Jacob_func[i] = new double[2];
+// 		for (int j = 0; j < 2; j++)
+// 		{
+// 			Jacob_func[i][j] = Jacob_func1[i][j];
+// 		}
+// 	}
+	
+// 	return Jacob_func;
+// }
+
+double** jacobFunc(double x1, double x2) 
+{
+	double Jacob_func1[2][2] {{0}};
+	double** Jacob_func = new double* [2];
+	double M = 0.01;
+
+	Jacob_func1[0][0] = (func1(x1 + M, x2) - func1(x1, x2)) / M;
+	Jacob_func1[0][1] = (func1(x1, x2 + M) - func1(x1, x2)) / M;
+	Jacob_func1[1][0] = (func2(x1 + M, x2) - func2(x1, x2)) / M;
+	Jacob_func1[1][1] = (func2(x1, x2 + M) - func2(x1, x2)) / M;
+
+	for (int i = 0; i < 2; i++)
+	{
+		Jacob_func[i] = new double[2];
+		for (int j = 0; j < 2; j++)
+		{
+			Jacob_func[i][j] = Jacob_func1[i][j];
+		}
+	}
+
+	return Jacob_func;
+}
+
+double** forG(double** Jacob_func, double* results)
+{
+	double** G = new double* [2];
+
+	for (int i = 0; i < 2; i++)
+	{
+		G[i] = new double[3];
+		G[i][2] = -1 * results[i];
+		for (int j = 0; j < 2; j++)
+		{
+			G[i][j] = Jacob_func[i][j];
+		}
+	}
+
+	return G;
+}
+
+void out(int iter, double x1, double x2, double temp1, double temp2)
+{
+	double max1 = 0, max2 = 0;
+	if (func1(temp1, temp2) > max1)
+	{
+		max1 = func1(temp1, temp2);
+	}
+	else if (func2(temp1, temp2) > max1)
+	{
+		max1 = func2(temp1, temp2);
+	}
+
+	if (abs(x1) < 1.0)
+	{
+		if ((x1 - temp1) > max2)
+		{
+			max2 = x1 - temp1;
+		}
+		else if ((x2 - temp2) > max2)
+		{
+			max2 = x2 - temp2;
+		}
+	}
+	else
+	{
+		if ((x1 - temp1)/x1 > max2)
+		{
+			max2 = (x1 - temp1)/x1;
+		}
+		else if ((x2 - temp2)/x2 > max2)
+		{
+			max2 = (x2 - temp2)/x2;
+		}
+	}
+
+	cout << "\t" << iter << "\t" << setprecision(9)<< max1 << "\t"<< setprecision(9) << max2 << "\n\n";
+}
+
+int Max_func(int x, int y){
+	double max_func;
+	double f1 = func1(x, y);
+	double f2 = func2(x, y);
+
+	abs(f1 > f2) ?
+		max_func = f1 :
+		max_func = f2;
+
+	return max_func;
+}
+
+int Max_ans(int x, int y){
+	double max_ans;
+	abs(x > y) ?
+			max_ans = x :
+			max_ans = y;
+	
+	return max_ans;
 }
 
 int main()
 {
-	const int maxNumberIterations = 100;
-	const double firstSolutionError = pow(10, -9), secondSolutionError = pow(10, -9);
-	double x1 = 1, x2 = 1;
-	cout << "General information for all solutions: \n";
-	printf("Starting point of approximation for all solutions of the system: (%.*f; %.*f);\n", 0, x1, 0, x2);
-	printf("Solution error for x1: %.*f;\nSolution error for x2: %.*f;\n",
-		9, firstSolutionError, 9, secondSolutionError);
-	cout << "Max number of iterations: " << maxNumberIterations <<
-		".\n\n=====================================================\n\n";
-	vector<double> vectorOfRelativeIncrement{ 0.01, 0.05, 0.1 };
-	SolveNewtonMethod(x1, x2, firstSolutionError, secondSolutionError, maxNumberIterations, NULL);
-	for (int i = 0; i < vectorOfRelativeIncrement.size(); i++)
-		SolveNewtonMethod(x1, x2, firstSolutionError, secondSolutionError, maxNumberIterations,
-			vectorOfRelativeIncrement[i]);
-	return 0;
+
+	double eplission = pow(10, -9);
+	double x1 = 1.0, x2 = 1.0, temp1 = 0, temp2 = 0;
+	int iter = 1;
+	cout << "\tI\td1\td2\n\n";
+	while (true)
+	{
+		temp1 = x1;
+		temp2 = x2;
+		double** Jacob_func = jacobFunc(x1, x2);
+		double equation_results[2]{ func1(x1 ,x2), func2(x1 ,x2) };
+		double* ans = methodG(forG(Jacob_func, equation_results), 2, 3);
+		x1 += ans[0];
+		x2 += ans[1];
+		out(iter, x1, x2, temp1, temp2);
+		
+		if (Max_ans(ans[0], ans[1]) < eplission && Max_func(ans[0], ans[1]) < eplission)
+		{
+			break;
+		}
+		if (iter > 50)
+		{
+			cout << "Iterations error";
+			break;
+		}
+		iter++;
+	}
+	cout << "\tx1 = \t" << x1 << "\tx2 = \t" << x2;
 }
